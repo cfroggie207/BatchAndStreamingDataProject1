@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:17.4
+    container_name: postgres
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=orders
+      - POSTGRES_PASSWORD=s3cr3tp455w0rd
+      - POSTGRES_DB=orders
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d orders"]
+      interval: 30s
+      timeout: 60s
+      retries: 3
+      start_period: 5s
+
+  solution:
+    build:
+      context: .
+      dockerfile: src/Dockerfile
+    image: solution:latest
+    command: >
+      sh -c "python ingest.py && python -m pytest tests.py"
+    environment:
+      - PG_HOST=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
